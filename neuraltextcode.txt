@@ -1,0 +1,631 @@
+1
+Problem No: 01
+Problem Name: Write a MATLAB or Python program using perceptron net for AND function with
+bipolar inputs and targets. The convergence curves and the decision boundary lines are also shown.
+ 
+
+# Bipolar activation function
+def bipolar_activation(x):
+    return 1 if x >= 0 else -1
+
+# Perceptron training function
+def perceptron_train(inputs, targets, learning_rate=0.1, max_epochs=100):
+    num_inputs = inputs.shape[1]
+    num_samples = inputs.shape[0]
+
+    # Initialize weights and bias
+    weights = np.random.randn(num_inputs)
+    bias = np.random.randn()
+
+    convergence_curve = []
+
+    for epoch in range(max_epochs):
+        misclassified = 0
+
+        for i in range(num_samples):
+            net_input = np.dot(inputs[i], weights) + bias
+            predicted = bipolar_activation(net_input)
+
+            if predicted != targets[i]:
+                misclassified += 1
+                update = learning_rate * (targets[i] - predicted)
+                weights += update * inputs[i]
+                bias += update
+
+        accuracy = (num_samples - misclassified) / num_samples
+        convergence_curve.append(accuracy)
+
+        if misclassified == 0:
+            print("Converged in {} epochs.".format(epoch + 1))
+            break
+
+    return weights, bias, convergence_curve
+
+# Main function
+if __name__ == "__main__":
+    # Input and target data (bipolar representation for AND gate)
+    inputs = np.array([[-1, -1], [-1, 1], [1, -1], [1, 1]])
+    targets = np.array([-1, -1, -1, 1])
+
+    # Training the perceptron
+    weights, bias, convergence_curve = perceptron_train(inputs, targets)
+
+    # Decision boundary line
+    x = np.linspace(-2, 2, 100)
+    y = (-weights[0] * x - bias) / weights[1]
+
+    # Plot convergence curve
+    plt.figure(figsize=(8, 4))
+    plt.plot(range(1, len(convergence_curve) + 1), convergence_curve)
+    plt.xlabel('Epoch')
+    plt.ylabel('Accuracy')
+    plt.title('Convergence Curve')
+    plt.grid()
+    plt.show()
+
+    # Plot the decision boundary line and data points
+    plt.figure(figsize=(8, 6))
+    plt.plot(x, y, label='Decision Boundary')
+    for i in range(len(inputs)):
+        if targets[i] == 1:
+            plt.scatter(inputs[i][0], inputs[i][1], color='blue', marker='o', label='Class 1' if i == 0 else "")
+        else:
+            plt.scatter(inputs[i][0], inputs[i][1], color='red', marker='x', label='Class -1' if i == 0 else "")
+    plt.xlabel('Input 1')
+    plt.ylabel('Input 2')
+    plt.title('Perceptron Decision Boundary')
+    plt.legend()
+    plt.grid()
+    plt.show()
+
+
+Problem No: 02
+Problem Name: Generate the XOR function using the McCulloch-Pitts neuron by writing an M-file
+or.py file. The convergence curves and the decision boundary lines are also shown.
+
+  
+# Activation functions
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
+
+def sigmoid_derivative(x):
+    return x * (1 - x)
+
+# Input and expected output (XOR)
+inputs = np.array([[0, 0],
+                   [0, 1],
+                   [1, 0],
+                   [1, 1]])
+targets = np.array([[0], [1], [1], [0]])
+
+# Neural network parameters
+input_layer_size = 2
+hidden_layer_size = 2
+output_layer_size = 1
+learning_rate = 0.1
+max_epochs = 10000
+
+# Initialize weights and biases
+np.random.seed(42)
+weights_input_hidden = np.random.randn(input_layer_size, hidden_layer_size)
+bias_hidden = np.random.randn(hidden_layer_size)
+weights_hidden_output = np.random.randn(hidden_layer_size, output_layer_size)
+bias_output = np.random.randn(output_layer_size)
+
+convergence_curve = []
+
+# Training loop
+for epoch in range(max_epochs):
+    total_error = 0
+
+    for i in range(len(inputs)):
+        input_sample = inputs[i]
+        target = targets[i]
+
+        # Forward pass
+        hidden_input = np.dot(input_sample, weights_input_hidden) + bias_hidden
+        hidden_output = sigmoid(hidden_input)
+
+        final_input = np.dot(hidden_output, weights_hidden_output) + bias_output
+        final_output = sigmoid(final_input)
+
+        # Compute error
+        error = target - final_output
+        total_error += np.square(error).mean()
+
+        # Backward pass
+        output_delta = error * sigmoid_derivative(final_output)
+        hidden_error = output_delta.dot(weights_hidden_output.T)
+        hidden_delta = hidden_error * sigmoid_derivative(hidden_output)
+
+        # Update weights and biases
+        weights_hidden_output += np.outer(hidden_output, output_delta) * learning_rate
+        bias_output += output_delta * learning_rate
+        weights_input_hidden += np.outer(input_sample, hidden_delta) * learning_rate
+        bias_hidden += hidden_delta * learning_rate
+
+    convergence_curve.append(total_error)
+
+    # Early stopping
+    if total_error < 0.01:
+        print(f"Converged at epoch {epoch+1}")
+        break
+
+# Plot convergence curve
+plt.figure(figsize=(8, 4))
+plt.plot(range(1, len(convergence_curve) + 1), convergence_curve)
+plt.xlabel('Epoch')
+plt.ylabel('Total Error')
+plt.title('Convergence Curve')
+plt.grid()
+plt.show()
+
+# Prediction function for decision boundary
+def predict(x1, x2):
+    grid_input = np.c_[x1.ravel(), x2.ravel()]
+    hidden_input = np.dot(grid_input, weights_input_hidden) + bias_hidden
+    hidden_output = sigmoid(hidden_input)
+    final_input = np.dot(hidden_output, weights_hidden_output) + bias_output
+    final_output = sigmoid(final_input)
+    return final_output.reshape(x1.shape)
+
+# Create grid for decision boundary
+x1 = np.linspace(-0.5, 1.5, 200)
+x2 = np.linspace(-0.5, 1.5, 200)
+X1, X2 = np.meshgrid(x1, x2)
+Z = predict(X1, X2)
+
+# Plot decision boundary
+plt.figure(figsize=(8, 6))
+plt.contourf(X1, X2, Z, levels=[0, 0.5, 1], colors=['red', 'blue'], alpha=0.3)
+plt.scatter(inputs[:, 0], inputs[:, 1], c=targets.flatten(), cmap='bwr', edgecolors='k')
+plt.xlabel('Input 1')
+plt.ylabel('Input 2')
+plt.title('XOR Function Decision Boundary')
+plt.grid()
+plt.show()
+
+
+Problem No: 03
+Problem Name: Implement the SGD Method using Delta learning rule for following input-target
+sets. 𝑿𝑰𝒏𝒑𝒖𝒕 = [ 0 0 1; 0 1 1;1 0 1; 1 1 1], 𝑫𝑻𝒂𝒓𝒈𝒆𝒕 = [ 0; 0; 1; 1]. 
+
+ 
+# Input and target values
+Xinput = np.array([
+    [0, 0, 1],  # Bias included in the third column
+    [0, 1, 1],
+    [1, 0, 1],
+    [1, 1, 1]
+])
+Dtarget = np.array([0, 0, 1, 1])  # Target output (OR logic)
+
+# Initialize weights randomly
+weights = np.random.randn(3)
+learning_rate = 0.1
+epochs = 100
+
+# Step activation function
+def step_function(x):
+    return np.where(x >= 0, 1, 0)
+
+# Training using SGD and Delta learning rule
+convergence_curve = []
+converged = False
+
+for epoch in range(epochs):
+    total_error = 0
+
+    # Shuffle data each epoch (SGD)
+    indices = np.random.permutation(len(Xinput))
+    Xinput_shuffled = Xinput[indices]
+    Dtarget_shuffled = Dtarget[indices]
+
+    for i in range(len(Xinput)):
+        x = Xinput_shuffled[i]
+        d = Dtarget_shuffled[i]
+
+        # Forward pass
+        y = step_function(np.dot(x, weights))
+
+        # Error calculation
+        error = d - y
+        total_error += abs(error)
+
+        # Update weights using Delta Rule
+        weights += learning_rate * error * x
+
+    convergence_curve.append(total_error)
+
+    if total_error == 0 and not converged:
+        print(f"Converged in {epoch + 1} epochs.")
+        converged = True
+        break
+
+# Final weights
+print("Final weights:", weights)
+
+# Plot convergence curve
+plt.plot(range(1, len(convergence_curve) + 1), convergence_curve, marker='o')
+plt.xlabel('Epoch')
+plt.ylabel('Total Error')
+plt.title('Convergence Curve (SGD with Delta Rule)')
+plt.grid()
+plt.show()
+
+
+11
+Problem No: 04
+Problem Name: Compare the performance of SGD and the Batch method using the delta learning
+rule. 
+  
+
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
+
+def sigmoid_derivative(x):
+    return x * (1 - x)
+
+# XOR dataset with bias as third input
+X_input = np.array([[0, 0, 1],
+                    [0, 1, 1],
+                    [1, 0, 1],
+                    [1, 1, 1]])
+D_target = np.array([[0], [1], [1], [0]])
+
+# Neural network parameters
+input_layer_size = 3
+output_layer_size = 1
+learning_rate = 0.1
+max_epochs = 10000
+
+# Initialize weights
+np.random.seed(42)
+weights_sgd = np.random.randn(input_layer_size, output_layer_size)
+weights_batch = np.random.randn(input_layer_size, output_layer_size)
+
+# --- SGD Training ---
+start_time_sgd = time.time()
+for epoch in range(max_epochs):
+    total_error = 0
+    for i in range(len(X_input)):
+        x = X_input[i].reshape(1, -1)
+        d = D_target[i]
+
+        net = np.dot(x, weights_sgd)
+        y = sigmoid(net)
+        error = d - y
+        total_error += abs(error)
+
+        # Weight update (delta rule)
+        weights_sgd += learning_rate * error * sigmoid_derivative(y) * x.T
+
+    if total_error < 0.01:
+        break
+end_time_sgd = time.time()
+
+# --- Batch Training ---
+start_time_batch = time.time()
+for epoch in range(max_epochs):
+    net_input = np.dot(X_input, weights_batch)
+    predicted_output = sigmoid(net_input)
+    error = D_target - predicted_output
+    error_sum = np.sum(np.abs(error))
+
+    # Batch update
+    delta = learning_rate * np.dot(X_input.T, error * sigmoid_derivative(predicted_output))
+    weights_batch += delta
+
+    if error_sum < 0.01:
+        break
+end_time_batch = time.time()
+
+# --- Prediction function ---
+def test_model(weights):
+    net = np.dot(X_input, weights)
+    output = sigmoid(net)
+    return np.round(output)
+
+# --- Results ---
+print("SGD Results:")
+print("Time taken: {:.6f} seconds".format(end_time_sgd - start_time_sgd))
+print("Trained weights (SGD):")
+print(weights_sgd)
+
+print("\nBatch Method Results:")
+print("Time taken: {:.6f} seconds".format(end_time_batch - start_time_batch))
+print("Trained weights (Batch):")
+print(weights_batch)
+
+print("\nPredicted binary outputs (Batch):")
+print(test_model(weights_batch).astype(int))
+
+
+Problem No: 05
+Problem Name: Write a MATLAB or Python program to recognize the image of digits. The input
+images are five by-five pixel squares, which display five numbers from 1 to 5, as shown in Figure 1.
+ import numpy as np
+
+def softmax(x):
+    ex = np.exp(x - np.max(x))  # For numerical stability
+    return ex / np.sum(ex)
+
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
+
+def multi_class(W1, W2, X, D):
+    alpha = 0.9  # Learning rate
+    N = X.shape[2]  # Number of samples
+    for k in range(N):
+        x = X[:, :, k].reshape(-1, 1)  # Flatten input to (25,1)
+        d = D[k, :].reshape(-1, 1)    # Desired output (one-hot vector)
+
+        v1 = np.dot(W1, x)
+        y1 = sigmoid(v1)               # Hidden layer output
+
+        v = np.dot(W2, y1)
+        y = softmax(v)                 # Output layer output (probabilities)
+
+        e = d - y                     # Error
+        delta = e                    # For output layer
+
+        e1 = np.dot(W2.T, delta)
+        delta1 = y1 * (1 - y1) * e1   # Hidden layer delta
+
+        dW1 = alpha * np.dot(delta1, x.T)
+        W1 = W1 + dW1
+
+        dW2 = alpha * np.dot(delta, y1.T)
+        W2 = W2 + dW2
+
+    return W1, W2
+
+def main():
+    np.random.seed(3)
+
+    # Input patterns (5x5 images for digits 0-4)
+    X = np.zeros((5, 5, 5))
+    X[:, :, 0] = np.array([[0, 1, 1, 0, 0],
+                          [0, 0, 1, 0, 0],
+                          [0, 0, 1, 0, 0],
+                          [0, 0, 1, 0, 0],
+                          [0, 1, 1, 1, 0]])
+
+    X[:, :, 1] = np.array([[1, 1, 1, 1, 0],
+                          [0, 0, 0, 0, 1],
+                          [0, 1, 1, 1, 0],
+                          [1, 0, 0, 0, 0],
+                          [1, 1, 1, 1, 1]])
+
+    X[:, :, 2] = np.array([[1, 1, 1, 1, 0],
+                          [0, 0, 0, 0, 1],
+                          [0, 1, 1, 1, 0],
+                          [0, 0, 0, 0, 1],
+                          [1, 1, 1, 1, 0]])
+
+    X[:, :, 3] = np.array([[0, 0, 0, 1, 0],
+                          [0, 0, 1, 1, 0],
+                          [0, 1, 0, 1, 0],
+                          [1, 1, 1, 1, 1],
+                          [0, 0, 0, 1, 0]])
+
+    X[:, :, 4] = np.array([[1, 1, 1, 1, 1],
+                          [1, 0, 0, 0, 0],
+                          [1, 1, 1, 1, 0],
+                          [0, 0, 0, 0, 1],
+                          [1, 1, 1, 1, 0]])
+
+    D = np.eye(5)  # One-hot targets for 5 classes
+
+    # Initialize weights
+    W1 = 2 * np.random.rand(50, 25) - 1  # 50 hidden neurons, 25 inputs
+    W2 = 2 * np.random.rand(5, 50) - 1   # 5 outputs, 50 hidden neurons
+
+    epochs = 10000
+    for epoch in range(epochs):
+        W1, W2 = multi_class(W1, W2, X, D)
+
+    # Testing after training
+    for k in range(X.shape[2]):
+        x = X[:, :, k].reshape(-1, 1)
+        v1 = np.dot(W1, x)
+        y1 = sigmoid(v1)
+        v = np.dot(W2, y1)
+        y = softmax(v)
+
+        print(f"\nOutput for X[:,:,{k}]:")
+        print(y.T)
+        print(f"This matrix shows the highest probability at position {np.argmax(y) + 1}, " +
+              f"accuracy: {np.max(y):.4f}. So this number is correctly identified.")
+
+if __name__ == "__main__":
+    main()
+ 
+Problem No: 06
+Problem Name: Write a MATLAB or Python program to classify face/fruit/bird using Convolution
+Neural Network (CNN).
+
+
+
+
+
+22
+Problem No: 07
+Problem Name: Consider an artificial neural network (ANN) with three layers given below. Write a
+MATLAB or Python program to learn this network using Back Propagation Network.
+ import torch
+import torch.nn as nn
+import torch.optim as optim
+
+class SimpleANN(nn.Module):
+    def __init__(self):
+        super(SimpleANN, self).__init__()
+        # Input to Hidden layer (2 inputs to 2 hidden neurons)
+        self.hidden = nn.Linear(2, 2)
+        # Hidden to Output layer (2 hidden neurons to 2 output neurons)
+        self.output = nn.Linear(2, 2)
+        # Sigmoid activation function
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        # Forward pass through the network
+        h = self.sigmoid(self.hidden(x))  # Hidden layer activation
+        y = self.sigmoid(self.output(h))  # Output layer activation
+        return y
+
+# Create the network
+model = SimpleANN()
+
+# Set the weights and biases based on the diagram (manual initialization)
+with torch.no_grad():
+    model.hidden.weight = torch.nn.Parameter(torch.tensor([[0.15, 0.20], [0.25, 0.30]]))
+    model.hidden.bias = torch.nn.Parameter(torch.tensor([0.35, 0.35]))
+    model.output.weight = torch.nn.Parameter(torch.tensor([[0.40, 0.45], [0.50, 0.55]]))
+    model.output.bias = torch.nn.Parameter(torch.tensor([0.60, 0.60]))
+
+# Define input (x1, x2) and target values (T1, T2)
+inputs = torch.tensor([[0.05, 0.10]])
+targets = torch.tensor([[0.01, 0.99]])
+
+# Define the loss function (Mean Squared Error Loss)
+criterion = nn.MSELoss()
+
+# Define the optimizer (Stochastic Gradient Descent)
+optimizer = optim.SGD(model.parameters(), lr=0.5)
+
+# Number of epochs (iterations)
+epochs = 15000
+
+# Training loop
+for epoch in range(epochs):
+    optimizer.zero_grad()        # Zero gradients
+    output = model(inputs)       # Forward pass
+    loss = criterion(output, targets)  # Compute loss
+    loss.backward()              # Backpropagation
+    optimizer.step()             # Update weights
+
+    if epoch % 1000 == 0:
+        print(f"Epoch {epoch}, Loss: {loss.item()}")
+
+# Print final weights and biases after training
+print("\nFinal weights and biases:")
+for name, param in model.named_parameters():
+    print(f"{name}: {param.data}")
+
+# Final output after training
+final_output = model(inputs)
+print(f"\nFinal output (y1, y2): {final_output[0][0]:.4f}, {final_output[0][1]:.4f}")
+
+
+Problem No: 08
+Problem Name: Write a MATLAB or Python program to recognize the numbers 1 to 4 from speech
+signal using artificial neural network (ANN).
+
+
+
+Problem No: 09
+Problem Name: Write a MATLAB or Python program to Purchase Classification Prediction using
+SVM.
+
+ 
+ import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.svm import SVR
+from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.datasets import fetch_openml
+
+# Load the Boston housing dataset
+boston = fetch_openml(name='boston', version=1, as_frame=True)
+X = boston.data
+y = boston.target
+
+# Split the dataset into training and test sets
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42)
+
+# Create an SVM regressor
+svr = SVR(kernel='linear')  # You can also try 'rbf' or 'poly'
+
+# Fit the model on the training data
+svr.fit(X_train, y_train)
+
+# Make predictions on the test set
+y_pred = svr.predict(X_test)
+
+# Evaluate the model
+mse = mean_squared_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+print(f'Mean Squared Error: {mse:.2f}')
+print(f'R^2 Score: {r2:.2f}')
+
+print("\nPredicted values for the test set:")
+for actual, predicted in zip(y_test, y_pred):
+    print(f"Actual: {actual:.2f}, Predicted: {predicted:.2f}")
+
+# Plotting the predicted vs actual values
+plt.scatter(y_test, y_pred)
+plt.xlabel('Actual Prices')
+plt.ylabel('Predicted Prices')
+plt.title('Actual vs Predicted House Prices')
+plt.plot([min(y_test), max(y_test)], [min(y_test), max(y_test)], color='red', linestyle='--')
+plt.show()
+
+# Custom test data (make sure features are in the same order as dataset)
+custom_test_data = np.array([
+    [0.00632, 18.0, 2.31, 0.0, 0.538, 6.575, 65.2, 4.09, 2.0, 240.0, 17.8, 396.9, 9.14],
+    [0.02731, 0.0, 7.07, 0.0, 0.469, 6.421, 78.9, 4.9671, 2.0, 240.0, 19.58, 396.9, 4.03]
+])
+
+# Predict house prices for custom test data
+custom_predictions = svr.predict(custom_test_data)
+print("\nPredicted values for custom test data:")
+for i, prediction in enumerate(custom_predictions):
+    print(f"Custom Test Data {i + 1}: Predicted Price: {prediction:.2f}")
+
+Problem No: 10
+Problem Name: Write a MATLAB or Python program to reduce dimensions of a dataset into a new
+coordinate system using PCA algorithm.
+
+ import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.datasets import load_iris
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
+
+# Load the Iris dataset
+iris = load_iris()
+X = iris.data
+y = iris.target
+
+# Standardize the data (important before PCA)
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# Apply PCA to reduce to 2 principal components
+pca = PCA(n_components=2)
+X_pca = pca.fit_transform(X_scaled)
+
+# Create a DataFrame for PCA results
+pca_df = pd.DataFrame(data=X_pca, columns=['Principal Component 1', 'Principal Component 2'])
+pca_df['Target'] = y
+
+# Plot the PCA results with coloring by target class
+plt.figure(figsize=(8, 6))
+scatter = plt.scatter(
+    pca_df['Principal Component 1'], pca_df['Principal Component 2'], 
+    c=pca_df['Target'], cmap='viridis', edgecolor='k'
+)
+plt.title('PCA of Iris Dataset')
+plt.xlabel('Principal Component 1')
+plt.ylabel('Principal Component 2')
+plt.colorbar(scatter, label='Target Class')
+plt.grid(True)
+plt.show()
+
+# Explained variance by each principal component
+explained_variance = pca.explained_variance_ratio_
+print(f'Explained variance by each component: {explained_variance}')
+print(f'Total explained variance: {sum(explained_variance):.4f}')
